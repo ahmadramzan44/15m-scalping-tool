@@ -106,20 +106,55 @@ function generateSignal(candles){
     let sellScore = 0;
 
     // EMA Trend
-    if(ema9 > ema21) buyScore += 20;
-    if(ema9 < ema21) sellScore += 20;
+    const emaSlope = ema9 - EMA(closes.slice(0,-1),9);
+
+if(ema9 > ema21 && emaSlope > 0){
+
+    buyScore += 20;
+
+}
+
+if(ema9 < ema21 && emaSlope < 0){
+
+    sellScore += 20;
+
+}
 
     // EMA200 Filter
     if(last.close > ema200) buyScore += 15;
     if(last.close < ema200) sellScore += 15;
 
     // RSI
-    if(rsi >= 55 && rsi <= 70) buyScore += 15;
-    if(rsi <= 45 && rsi >= 30) sellScore += 15;
+    const prevRSI = RSI(closes.slice(0,-1),14);
+
+if(rsi > prevRSI && rsi >= 55){
+
+    buyScore += 15;
+
+}
+
+if(rsi < prevRSI && rsi <= 45){
+
+    sellScore += 15;
+
+}
 
     // MACD
-    if(macd > 0) buyScore += 20;
-    if(macd < 0) sellScore += 20;
+    const prevMacd =
+EMA(closes.slice(0,-1),12) -
+EMA(closes.slice(0,-1),26);
+
+if(macd > prevMacd){
+
+    buyScore += 20;
+
+}
+
+if(macd < prevMacd){
+
+    sellScore += 20;
+
+}
 
         // -----------------------------
     // Volume
@@ -232,30 +267,37 @@ function generateSignal(candles){
     // Final Decision
     // -----------------------------
 
-    if(buyScore >= 90){
+   const diff = Math.abs(buyScore - sellScore);
 
-        return "STRONG BUY";
-
-    }
-
-    if(buyScore >= 70){
-
-        return "BUY";
-
-    }
-
-    if(sellScore >= 90){
-
-        return "STRONG SELL";
-
-    }
-
-    if(sellScore >= 70){
-
-        return "SELL";
-
-    }
+if(diff < 20){
 
     return "WAIT";
 
+}
+
+if(buyScore >= 85){
+
+    return "STRONG BUY";
+
+}
+
+if(buyScore >= 65){
+
+    return "BUY";
+
+}
+
+if(sellScore >= 85){
+
+    return "STRONG SELL";
+
+}
+
+if(sellScore >= 65){
+
+    return "SELL";
+
+}
+
+return "WAIT";
 }
