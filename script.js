@@ -1,12 +1,21 @@
+let autoScan = null;
 const scanBtn = document.getElementById("scanBtn");
 const signalBox = document.getElementById("signal");
 const priceBox = document.getElementById("price");
 const timeBox = document.getElementById("time");
 
-scanBtn.addEventListener("click", scan);
-
 window.onload = scan;
 
+
+scanBtn.addEventListener("click", () => {
+
+    clearInterval(autoScan);
+
+    scan();
+
+    autoScan = setInterval(scan, 5000);
+
+});
 async function scan(){
 
     try{
