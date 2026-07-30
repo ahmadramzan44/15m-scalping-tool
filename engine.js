@@ -1,18 +1,25 @@
 // =======================================
-// 15M SCALPING ENGINE
+// 15M SCALPING ENGINE V2
 // =======================================
 
 function generateSignal(candles){
+
+    if(candles.length < 210){
+
+        return "WAIT";
+
+    }
 
     const closes = candles.map(c=>c.close);
     const volumes = candles.map(c=>c.volume);
 
     const last = candles[candles.length-1];
     const prev = candles[candles.length-2];
+    const prev2 = candles[candles.length-3];
 
-    // -----------------------------
-    // Indicators
-    // -----------------------------
+    // ==========================
+    // INDICATORS
+    // ==========================
 
     const ema9 = EMA(closes,9);
     const ema21 = EMA(closes,21);
@@ -24,18 +31,10 @@ function generateSignal(candles){
 
     const vwap = VWAP(candles);
 
-    // -----------------------------
-    // Volume
-    // -----------------------------
-
     const avgVolume = SMA(volumes,20);
 
     const volumeRatio =
         last.volume / avgVolume;
-
-    // -----------------------------
-    // MACD
-    // -----------------------------
 
     const ema12 = EMA(closes,12);
 
@@ -43,159 +42,44 @@ function generateSignal(candles){
 
     const macd = ema12 - ema26;
 
-    // -----------------------------
-    // Trend
-    // -----------------------------
+    const prevRSI =
+        RSI(closes.slice(0,-1),14);
 
-    let trend = "SIDEWAYS";
+    const prevMacd =
+        EMA(closes.slice(0,-1),12)
+        -
+        EMA(closes.slice(0,-1),26);
 
-    if(
-        ema9 > ema21 &&
-        ema21 > ema200
-    ){
+    const emaSlope =
+        ema9 -
+        EMA(closes.slice(0,-1),9);
 
-        trend = "BULLISH";
-
-    }
-
-    if(
-        ema9 < ema21 &&
-        ema21 < ema200
-    ){
-
-        trend = "BEARISH";
-
-    }
-
-        // -----------------------------
-    // Current Candle Strength
-    // -----------------------------
-
-    const body = Math.abs(last.close - last.open);
-
-    const range = last.high - last.low;
-
-    const bodyStrength =
-        range > 0 ? body / range : 0;
-
-    // -----------------------------
-    // Previous Candle Breakout
-    // -----------------------------
-
-    const bullishBreakout =
-        last.close > prev.high;
-
-    const bearishBreakout =
-        last.close < prev.low;
-
-    // -----------------------------
-    // VWAP Position
-    // -----------------------------
-
-    const aboveVWAP =
-        last.close > vwap;
-
-    const belowVWAP =
-        last.close < vwap;
-
-    // -----------------------------
-    // Momentum Score
-    // -----------------------------
+    // ==========================
+    // SCORE
+    // ==========================
 
     let buyScore = 0;
     let sellScore = 0;
 
-    // EMA Trend
-    const emaSlope = ema9 - EMA(closes.slice(0,-1),9);
+    // ==========================
+    // EMA TREND
+    // ==========================
 
-if(ema9 > ema21 && emaSlope > 0){
+    if(ema9 > ema21){
 
-    buyScore += 20;
+        buyScore += 20;
 
-}
-
-if(ema9 < ema21 && emaSlope < 0){
-
-    sellScore += 20;
-
-}
-
-    // EMA200 Filter
-    if(last.close > ema200) buyScore += 15;
-    if(last.close < ema200) sellScore += 15;
-
-    // RSI
-    const prevRSI = RSI(closes.slice(0,-1),14);
-
-if(rsi > prevRSI && rsi >= 55){
-
-    buyScore += 15;
-
-}
-
-if(rsi < prevRSI && rsi <= 45){
-
-    sellScore += 15;
-
-}
-
-    // MACD
-    const prevMacd =
-EMA(closes.slice(0,-1),12) -
-EMA(closes.slice(0,-1),26);
-
-if(macd > prevMacd){
-
-    buyScore += 20;
-
-}
-
-if(macd < prevMacd){
-
-    sellScore += 20;
-
-}
-
-        // -----------------------------
-    // Volume
-    // -----------------------------
-
-    if(volumeRatio >= 1.20){
-
-        buyScore += 10;
-        sellScore += 10;
-
-    }
-
-    // -----------------------------
-    // VWAP
-    // -----------------------------
-
-    if(aboveVWAP){
-
-        buyScore += 10;
-
-    }
-
-    if(belowVWAP){
-
-        sellScore += 10;
-
-    }
-
-    // -----------------------------
-    // Candle Strength
-    // -----------------------------
-
-    if(bodyStrength >= 0.60){
-
-        if(last.close > last.open){
+        if(emaSlope > 0){
 
             buyScore += 10;
 
         }
 
-        if(last.close < last.open){
+    }else{
+
+        sellScore += 20;
+
+        if(emaSlope < 0){
 
             sellScore += 10;
 
@@ -203,25 +87,153 @@ if(macd < prevMacd){
 
     }
 
-    // -----------------------------
-    // Breakout
-    // -----------------------------
+    // ==========================
+    // EMA200 FILTER
+    // ==========================
 
-    if(bullishBreakout){
+    if(last.close > ema200){
+
+        buyScore += 15;
+
+    }else{
+
+        sellScore += 15;
+
+    }
+
+    // ==========================
+    // RSI MOMENTUM
+    // ==========================
+
+    if(rsi > prevRSI){
+
+        buyScore += 15;
+
+    }
+
+    if(rsi < prevRSI){
+
+        sellScore += 15;
+
+    }
+
+    if(rsi > 75){
+
+        buyScore -= 10;
+
+    }
+
+    if(rsi < 25){
+
+        sellScore -= 10;
+
+    }
+
+    // ==========================
+    // MACD MOMENTUM
+    // ==========================
+
+    if(macd > prevMacd){
+
+        buyScore += 15;
+
+    }
+
+    if(macd < prevMacd){
+
+        sellScore += 15;
+
+    }
+
+    // ==========================
+    // LAST 3 CANDLES
+    // ==========================
+
+    const green1 = last.close > last.open;
+    const green2 = prev.close > prev.open;
+    const green3 = prev2.close > prev2.open;
+
+    const red1 = last.close < last.open;
+    const red2 = prev.close < prev.open;
+    const red3 = prev2.close < prev2.open;
+
+    if(green1 && green2){
+
+        buyScore += 15;
+
+    }
+
+    if(green1 && green2 && green3){
 
         buyScore += 10;
 
     }
 
-    if(bearishBreakout){
+    if(red1 && red2){
+
+        sellScore += 15;
+
+    }
+
+    if(red1 && red2 && red3){
 
         sellScore += 10;
 
     }
 
-    // -----------------------------
-    // ATR Filter
-    // -----------------------------
+    // ==========================
+    // VOLUME
+    // ==========================
+
+    if(volumeRatio >= 1.20){
+
+        if(green1){
+
+            buyScore += 10;
+
+        }
+
+        if(red1){
+
+            sellScore += 10;
+
+        }
+
+    }
+
+    // ==========================
+    // VWAP
+    // ==========================
+
+    if(last.close > vwap){
+
+        buyScore += 10;
+
+    }else{
+
+        sellScore += 10;
+
+    }
+
+    // ==========================
+    // BREAKOUT
+    // ==========================
+
+    if(last.close > prev.high){
+
+        buyScore += 15;
+
+    }
+
+    if(last.close < prev.low){
+
+        sellScore += 15;
+
+    }
+
+    // ==========================
+    // ATR FILTER
+    // ==========================
 
     const minATR = last.close * 0.0015;
 
@@ -231,73 +243,34 @@ if(macd < prevMacd){
 
     }
 
-        // -----------------------------
-    // Trend Confirmation
-    // -----------------------------
+    // ==========================
+    // FINAL DECISION
+    // ==========================
 
-    if(trend === "BULLISH"){
+    if(buyScore >= 95){
 
-        buyScore += 10;
-
-    }
-
-    if(trend === "BEARISH"){
-
-        sellScore += 10;
+        return "STRONG BUY";
 
     }
 
-    // -----------------------------
-    // Avoid Overbought / Oversold
-    // -----------------------------
+    if(sellScore >= 95){
 
-    if(rsi >= 75){
-
-        buyScore -= 15;
+        return "STRONG SELL";
 
     }
 
-    if(rsi <= 25){
+    if(buyScore >= 70 && buyScore > sellScore){
 
-        sellScore -= 15;
+        return "BUY";
 
     }
 
-    // -----------------------------
-    // Final Decision
-    // -----------------------------
+    if(sellScore >= 70 && sellScore > buyScore){
 
-   const diff = Math.abs(buyScore - sellScore);
+        return "SELL";
 
-if(diff < 20){
+    }
 
     return "WAIT";
 
-}
-
-if(buyScore >= 85){
-
-    return "STRONG BUY";
-
-}
-
-if(buyScore >= 65){
-
-    return "BUY";
-
-}
-
-if(sellScore >= 85){
-
-    return "STRONG SELL";
-
-}
-
-if(sellScore >= 65){
-
-    return "SELL";
-
-}
-
-return "WAIT";
 }
