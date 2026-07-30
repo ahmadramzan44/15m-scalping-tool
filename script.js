@@ -1,21 +1,31 @@
 let autoScan = null;
+let currentSymbol = "";
 const scanBtn = document.getElementById("scanBtn");
 const signalBox = document.getElementById("signal");
 const priceBox = document.getElementById("price");
 const timeBox = document.getElementById("time");
 
-window.onload = scan;
+window.onload = () => {};
 
 
 scanBtn.addEventListener("click", () => {
 
     clearInterval(autoScan);
 
+    currentSymbol = document
+        .getElementById("symbol")
+        .value
+        .trim()
+        .toUpperCase();
+
+    if(currentSymbol === "") return;
+
     scan();
 
-    autoScan = setInterval(scan, 5000);
+    autoScan = setInterval(scan,5000);
 
 });
+
 async function scan(){
 
     try{
@@ -23,12 +33,7 @@ async function scan(){
         signalBox.innerText = "SCANNING...";
         signalBox.className = "wait";
 
-        const symbol = document
-            .getElementById("symbol")
-            .value
-            .trim()
-            .toUpperCase();
-
+       const symbol = currentSymbol;
         // =============================
         // Binance Futures 15m Candles
         // =============================
@@ -106,7 +111,7 @@ async function scan(){
 
         priceBox.innerText = "--";
 
-        alert("Invalid Coin Symbol");
+        clearInterval(autoScan);
 
     }
 
