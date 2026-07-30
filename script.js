@@ -1,118 +1,144 @@
-let autoScan = null;
-let currentSymbol = "";
+// =====================================
+// MAIN SCRIPT
+// =====================================
+
+const symbolInput = document.getElementById("symbol");
 const scanBtn = document.getElementById("scanBtn");
-const signalBox = document.getElementById("signal");
 const priceBox = document.getElementById("price");
-const timeBox = document.getElementById("time");
+const signalBox = document.getElementById("signal");
 
-window.onload = () => {};
+let scanTimer = null;
 
-
-scanBtn.addEventListener("click", () => {
-
-    clearInterval(autoScan);
-
-    currentSymbol = document
-        .getElementById("symbol")
-        .value
-        .trim()
-        .toUpperCase();
-
-    if(currentSymbol === "") return;
-
-    scan();
-
-    autoScan = setInterval(scan,5000);
-
-});
-
-async function scan(){
+async function updateMarket(){
 
     try{
 
-        signalBox.innerText = "SCANNING...";
-        signalBox.className = "wait";
+        const symbol = currentSymbol;
 
-       const symbol = currentSymbol;
-        // =============================
-        // Binance Futures 15m Candles
-        // =============================
+        if(symbol === "") return;
 
-        const candleResponse = await fetch(
-
-            `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=15m&limit=200`
-
-        );
-
-        if(!candleResponse.ok){
-
-            throw new Error("Invalid Symbol");
-
-        }
-
-        const candles = await candleResponse.json();
-
-        // =============================
         // Live Price
-        // =============================
+        const price = await getPrice(symbol);
 
-        const priceResponse = await fetch(
+        priceBox.innerText = price.toFixed(4);
 
-            `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`
+        // Candles
+        const candles = await getCandles(symbol);
 
-        );
-
-        const priceData = await priceResponse.json();
-
-        priceBox.innerText =
-            Number(priceData.price).toFixed(4);
-
-        // =============================
-        // Signal Engine
-        // =============================
-
-        const signal =
-            generateSignal(candles);
+        // Signal
+        const signal = generateSignal(candles);
 
         signalBox.innerText = signal;
 
         signalBox.className = "";
 
-        if(signal === "BUY"){
+        switch(signal){
 
-            signalBox.classList.add("buy");
+            case "STRONG BUY":
+
+                signalBox.classList.add("buy");
+
+                break;
+
+            case "BUY":
+
+                signalBox.classList.add("buy");
+
+                break;
+
+            case "STRONG SELL":
+
+                signalBox.classList.add("sell");
+
+                break;
+
+            case "SELL":
+
+                signalBox.classList.add("sell");
+
+                break;
+
+            default:
+
+                signalBox.classList.add("wait");
 
         }
-        else if(signal === "SELL"){
-
-            signalBox.classList.add("sell");
-
-        }
-        else{
-
-            signalBox.classList.add("wait");
-
-        }
-
-        const now = new Date();
-
-        timeBox.innerText =
-            "Updated : " +
-            now.toLocaleTimeString();
 
     }
     catch(error){
 
         console.error(error);
 
-        signalBox.innerText = "WAIT";
-
-        signalBox.className = "wait";
-
-        priceBox.innerText = "--";
-
-        clearInterval(autoScan);
-
     }
 
 }
+
+// =====================================
+// START SCANNER
+// =====================================
+
+function startScanner(){
+
+    clearInterval(scanTimer);
+
+    updateMarket();
+
+    scanTimer = setInterval(updateMarket,2000);
+
+}
+
+// =====================================
+// SCAN BUTTON
+// =====================================
+
+scanBtn.addEventListener("click",()=>{
+
+    let symbol = symbolInput.value
+        .trim()
+        .toUpperCase();
+
+    if(symbol==="") return;
+
+    if(!symbol.endsWith("USDT")){
+
+        symbol += "USDT";
+
+    }
+
+    currentSymbol = symbol;
+
+    startScanner();
+
+});
+
+// =====================================
+// STOP WHILE TYPING
+// =====================================
+
+symbolInput.addEventListener("focus",()=>{
+
+    clearInterval(scanTimer);
+
+});
+
+// =====================================
+// ENTER KEY SUPPORT
+// =====================================
+
+symbolInput.addEventListener("keydown",(e)=>{
+
+    if(e.key==="Enter"){
+
+        scanBtn.click();
+
+    }
+
+});
+
+// =====================================
+// DEFAULT COIN
+// =====================================
+
+currentSymbol="BTCUSDT";
+
+startScanner();
