@@ -1,16 +1,18 @@
 const scanBtn = document.getElementById("scanBtn");
 const signalBox = document.getElementById("signal");
+const priceBox = document.getElementById("price");
+const timeBox = document.getElementById("time");
 
-scanBtn.addEventListener("click", scanCoin);
+scanBtn.addEventListener("click", scan);
 
-window.onload = scanCoin;
+window.onload = scan;
 
-async function scanCoin() {
+async function scan(){
 
-    try {
+    try{
 
         signalBox.innerText = "SCANNING...";
-        signalBox.className = "signal wait";
+        signalBox.className = "wait";
 
         const symbol = document
             .getElementById("symbol")
@@ -18,56 +20,84 @@ async function scanCoin() {
             .trim()
             .toUpperCase();
 
-        if (!symbol) {
+        // =============================
+        // Binance Futures 15m Candles
+        // =============================
 
-            alert("Enter Coin Symbol");
+        const candleResponse = await fetch(
 
-            return;
+            `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=15m&limit=200`
 
-        }
+        );
 
-        const url =
-            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=15m&limit=200`;
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
+        if(!candleResponse.ok){
 
             throw new Error("Invalid Symbol");
 
         }
 
-        const candles = await response.json();
+        const candles = await candleResponse.json();
 
-        const result = generateSignal(candles);
+        // =============================
+        // Live Price
+        // =============================
 
-        signalBox.innerText = result;
+        const priceResponse = await fetch(
 
-        signalBox.className = "signal";
+            `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`
 
-        if (result === "BUY") {
+        );
+
+        const priceData = await priceResponse.json();
+
+        priceBox.innerText =
+            Number(priceData.price).toFixed(4);
+
+        // =============================
+        // Signal Engine
+        // =============================
+
+        const signal =
+            generateSignal(candles);
+
+        signalBox.innerText = signal;
+
+        signalBox.className = "";
+
+        if(signal === "BUY"){
 
             signalBox.classList.add("buy");
 
         }
-        else if (result === "SELL") {
+        else if(signal === "SELL"){
 
             signalBox.classList.add("sell");
 
         }
-        else {
+        else{
 
             signalBox.classList.add("wait");
 
         }
 
+        const now = new Date();
+
+        timeBox.innerText =
+            "Updated : " +
+            now.toLocaleTimeString();
+
     }
-    catch (error) {
+    catch(error){
 
         console.error(error);
 
         signalBox.innerText = "WAIT";
-        signalBox.className = "signal wait";
+
+        signalBox.className = "wait";
+
+        priceBox.innerText = "--";
+
+        alert("Invalid Coin Symbol");
 
     }
 
