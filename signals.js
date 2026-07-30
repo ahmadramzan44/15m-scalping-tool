@@ -1,139 +1,157 @@
-// ==========================================
+// =======================================
 // 15M SCALPING SIGNAL ENGINE
-// PART 4A
-// ==========================================
+// PART 1
+// =======================================
 
-// =============================
-// EMA
-// =============================
-function calculateEMA(prices, period){
+// ---------- SMA ----------
+function sma(values, period){
 
-    const k = 2 / (period + 1);
+    if(values.length < period) return 0;
 
-    let ema = prices[0];
+    let sum = 0;
 
-    for(let i = 1; i < prices.length; i++){
+    for(let i = values.length-period; i < values.length; i++){
 
-        ema = prices[i] * k + ema * (1 - k);
+        sum += values[i];
 
     }
-
-    return ema;
-
-}
-
-// =============================
-// SMA
-// =============================
-function calculateSMA(prices, period){
-
-    const slice = prices.slice(-period);
-
-    const sum = slice.reduce((a,b)=>a+b,0);
 
     return sum / period;
 
 }
 
-// =============================
-// RSI
-// =============================
-function calculateRSI(prices, period = 14){
+// ---------- EMA ----------
+function ema(values, period){
 
-    let gains = 0;
-    let losses = 0;
+    if(values.length < period) return 0;
 
-    for(let i = prices.length - period; i < prices.length; i++){
+    const k = 2 / (period + 1);
 
-        const change = prices[i] - prices[i-1];
+    let value = sma(values.slice(0, period), period);
 
-        if(change > 0){
+    for(let i = period; i < values.length; i++){
 
-            gains += change;
+        value = values[i] * k + value * (1-k);
+
+    }
+
+    return value;
+
+}
+
+// ---------- RSI ----------
+function rsi(values, period = 14){
+
+    if(values.length < period + 1) return 50;
+
+    let gain = 0;
+    let loss = 0;
+
+    for(let i = values.length-period; i < values.length; i++){
+
+        const diff = values[i] - values[i-1];
+
+        if(diff > 0){
+
+            gain += diff;
 
         }else{
 
-            losses += Math.abs(change);
+            loss += Math.abs(diff);
 
         }
 
     }
 
-    if(losses === 0){
+    if(loss === 0) return 100;
 
-        return 100;
-
-    }
-
-    const rs = gains / losses;
+    const rs = gain / loss;
 
     return 100 - (100 / (1 + rs));
 
 }
 
-// =============================
-// ATR
-// =============================
-function calculateATR(candles, period = 14){
+// ---------- ATR ----------
+function atr(candles, period = 14){
 
-    let trs = [];
+    if(candles.length < period + 1) return 0;
 
-    for(let i = 1; i < candles.length; i++){
+    const tr = [];
 
-        const high = parseFloat(candles[i][2]);
-        const low = parseFloat(candles[i][3]);
-        const prevClose = parseFloat(candles[i-1][4]);
+    for(let i=1;i<candles.length;i++){
 
-        const tr = Math.max(
+        const high = Number(candles[i][2]);
+        const low = Number(candles[i][3]);
+        const prevClose = Number(candles[i-1][4]);
 
-            high-low,
+        tr.push(
 
-            Math.abs(high-prevClose),
+            Math.max(
 
-            Math.abs(low-prevClose)
+                high-low,
+
+                Math.abs(high-prevClose),
+
+                Math.abs(low-prevClose)
+
+            )
 
         );
 
-        trs.push(tr);
-
     }
 
-    return calculateSMA(trs, period);
+    return sma(tr,period);
 
 }
 
-// ==========================================
-// Main Function
-// ==========================================
+// =======================================
+// MAIN FUNCTION
+// =======================================
+
 function generateSignal(candles){
 
-    const closes = candles.map(c=>parseFloat(c[4]));
+    const closes = candles.map(c=>Number(c[4]));
 
-    const volumes = candles.map(c=>parseFloat(c[5]));
+    const volumes = candles.map(c=>Number(c[5]));
 
-    const ema9 = calculateEMA(closes.slice(-40),9);
+    const highs = candles.map(c=>Number(c[2]));
 
-    const ema21 = calculateEMA(closes.slice(-60),21);
+    const lows = candles.map(c=>Number(c[3]));
 
-    const ema50 = calculateEMA(closes.slice(-100),50);
+    const lastPrice = closes.at(-1);
 
-    const rsi = calculateRSI(closes);
+    const ema9 = ema(closes,9);
 
-    const atr = calculateATR(candles);
+    const ema21 = ema(closes,21);
 
-        // =============================
+    const ema50 = ema(closes,50);
+
+    const rsiValue = rsi(closes);
+
+    const atrValue = atr(candles);
+
+        // =======================================
     // MACD
-    // =============================
+    // =======================================
 
-    const ema12 = calculateEMA(closes.slice(-60),12);
-
-    const ema26 = calculateEMA(closes.slice(-60),26);
+    const ema12 = ema(closes,12);
+    const ema26 = ema(closes,26);
 
     const macd = ema12 - ema26;
 
-    // =============================
-    // Trend
-    // =============================
+    // =======================================
+    // VOLUME
+    // =======================================
+
+    const avgVolume = sma(volumes,20);
+
+    const volumeRatio = avgVolume > 0
+        ? volumes.at(-1) / avgVolume
+        : 1;
+
+    // =======================================
+    // TREND
+    // =======================================
 
     let trend = "SIDEWAYS";
 
@@ -154,27 +172,11 @@ function generateSignal(candles){
 
     }
 
-    // =============================
-    // Volume
-    // =============================
+    // =======================================
+    // ADX (Approximation)
+    // =======================================
 
-    const currentVolume =
-        volumes[volumes.length - 1];
-
-    const averageVolume =
-        calculateSMA(volumes,20);
-
-    const volumeRatio =
-        currentVolume / averageVolume;
-
-    // =============================
-    // ADX (Temporary)
-    // =============================
-
-    // Real ADX Part 4C mein add hoga.
-    // Filhal trend strength ke liye ATR use karenge.
-
-    let adx = atr * 10;
+    let adx = atrValue * 8;
 
     if(adx > 50){
 
@@ -182,124 +184,177 @@ function generateSignal(candles){
 
     }
 
-    // =============================
-    // Latest Candle
-    // =============================
+    // =======================================
+    // SUPPORT / RESISTANCE
+    // =======================================
 
-    const lastClose =
-        closes[closes.length-1];
-
-    const recentHigh =
-        Math.max(...closes.slice(-20));
-
-    const recentLow =
-        Math.min(...closes.slice(-20));
+    const recentHigh = Math.max(...highs.slice(-20));
+    const recentLow  = Math.min(...lows.slice(-20));
 
     const resistanceDistance =
-        ((recentHigh-lastClose)/lastClose)*100;
+        ((recentHigh-lastPrice)/lastPrice)*100;
 
     const supportDistance =
-        ((lastClose-recentLow)/lastClose)*100;
+        ((lastPrice-recentLow)/lastPrice)*100;
 
-        // =============================
-    // Candlestick Pattern
-    // =============================
-
-    let bullishPattern = false;
-    let bearishPattern = false;
+        // =======================================
+    // CANDLE PATTERNS
+    // =======================================
 
     const prev = candles[candles.length - 2];
     const last = candles[candles.length - 1];
 
-    const prevOpen = parseFloat(prev[1]);
-    const prevClose = parseFloat(prev[4]);
+    const prevOpen = Number(prev[1]);
+    const prevClose = Number(prev[4]);
 
-    const open = parseFloat(last[1]);
-    const close = parseFloat(last[4]);
-    const high = parseFloat(last[2]);
-    const low = parseFloat(last[3]);
+    const open = Number(last[1]);
+    const close = Number(last[4]);
+    const high = Number(last[2]);
+    const low = Number(last[3]);
 
     const body = Math.abs(close - open);
     const upperWick = high - Math.max(open, close);
     const lowerWick = Math.min(open, close) - low;
 
+    let bullishPattern = false;
+    let bearishPattern = false;
+
+    // =============================
     // Bullish Engulfing
+    // =============================
+
     if (
         prevClose < prevOpen &&
         close > open &&
         close >= prevOpen &&
         open <= prevClose
     ) {
+
         bullishPattern = true;
+
     }
 
+    // =============================
     // Bearish Engulfing
+    // =============================
+
     if (
         prevClose > prevOpen &&
         close < open &&
         open >= prevClose &&
         close <= prevOpen
     ) {
+
         bearishPattern = true;
+
     }
 
+    // =============================
     // Hammer
+    // =============================
+
     if (
         lowerWick > body * 2 &&
         upperWick < body
     ) {
+
         bullishPattern = true;
+
     }
 
+    // =============================
     // Shooting Star
+    // =============================
+
     if (
         upperWick > body * 2 &&
         lowerWick < body
     ) {
+
         bearishPattern = true;
+
     }
 
-    // =============================
+    // =======================================
     // BUY CONDITIONS
-    // =============================
+    // =======================================
 
-    const buyPass =
+    const buySignal =
+
         trend === "BULLISH" &&
         ema9 > ema21 &&
         macd > 0 &&
-        rsi > 50 &&
-        rsi < 70 &&
-        volumeRatio > 1.20 &&
+        rsiValue >= 52 &&
+        rsiValue <= 68 &&
         adx >= 20 &&
-        resistanceDistance > 0.30 &&
+        volumeRatio >= 1.20 &&
+        resistanceDistance >= 0.25 &&
         bullishPattern;
 
-    // =============================
+    // =======================================
     // SELL CONDITIONS
-    // =============================
+    // =======================================
 
-    const sellPass =
+    const sellSignal =
+
         trend === "BEARISH" &&
         ema9 < ema21 &&
         macd < 0 &&
-        rsi < 50 &&
-        rsi > 30 &&
-        volumeRatio > 1.20 &&
+        rsiValue >= 32 &&
+        rsiValue <= 48 &&
         adx >= 20 &&
-        supportDistance > 0.30 &&
+        volumeRatio >= 1.20 &&
+        supportDistance >= 0.25 &&
         bearishPattern;
 
-        // =============================
-    // FINAL SIGNAL
-    // =============================
+        // =======================================
+    // FINAL 15M SCALPING FILTERS
+    // =======================================
 
-    if (buyPass) {
+    const candleRange = high - low;
+
+    // Weak candle
+    const strongCandle =
+        candleRange >= atrValue * 0.60;
+
+    // EMA distance
+    const emaGap =
+        Math.abs(ema9 - ema21);
+
+    const emaTrendStrong =
+        emaGap >= atrValue * 0.05;
+
+    // Avoid flat market
+    const marketActive =
+        atrValue > lastPrice * 0.0015;
+
+    // Final BUY
+    const finalBuy =
+
+        buySignal &&
+        strongCandle &&
+        emaTrendStrong &&
+        marketActive;
+
+    // Final SELL
+    const finalSell =
+
+        sellSignal &&
+        strongCandle &&
+        emaTrendStrong &&
+        marketActive;
+
+        // =======================================
+    // FINAL DECISION
+    // =======================================
+
+    if (finalBuy) {
 
         return "BUY";
 
     }
 
-    if (sellPass) {
+    if (finalSell) {
 
         return "SELL";
 
