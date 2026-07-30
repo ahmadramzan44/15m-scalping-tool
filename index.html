@@ -4,7 +4,6 @@
 <head>
 
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>15M Scalping Signal</title>
@@ -15,33 +14,49 @@
 
 <body>
 
-<div class="container">
+<div class="card">
 
-<h1>15M SCALPING SIGNAL</h1>
+<h1>15M SCALPING</h1>
 
 <input
 id="symbol"
 type="text"
 placeholder="BTCUSDT"
 value="BTCUSDT"
-autocomplete="off">
+autocomplete="off"
+>
 
 <button id="scanBtn">
-
 SCAN
-
 </button>
 
-<div id="signal" class="signal wait">
+<div class="priceBox">
+
+<div class="label">
+Current Price
+</div>
+
+<div id="price">
+--
+</div>
+
+</div>
+
+<div id="signal" class="wait">
 
 WAIT
+
+</div>
+
+<div id="time">
+
+--
 
 </div>
 
 </div>
 
 <script src="signals.js"></script>
-
 <script src="script.js"></script>
 
 </body>
