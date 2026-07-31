@@ -1,44 +1,47 @@
-// ===============================
-// 15 Minute Countdown
-// ===============================
+// =====================================
+// Binance 15m Countdown
+// =====================================
 
-function updateTimer(){
+async function updateTimer(){
 
-    const now = new Date();
+    try{
 
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
+        const res = await fetch(
+            "https://api.binance.com/api/v3/time"
+        );
 
-    const remainMinutes = 14 - (minutes % 15);
-    const remainSeconds = 60 - seconds;
+        const data = await res.json();
 
-    let m = remainMinutes;
-    let s = remainSeconds;
+        const now = new Date(data.serverTime);
 
-    if(s === 60){
+        const totalSeconds =
+            Math.floor(now.getTime()/1000);
 
-        s = 0;
+        const remain =
+            900 - (totalSeconds % 900);
 
-    }else{
+        const minutes =
+            Math.floor(remain/60);
 
-        m--;
+        const seconds =
+            remain % 60;
+
+        document.getElementById("time").innerText =
+            "Next Candle : " +
+            String(minutes).padStart(2,"0") +
+            ":" +
+            String(seconds).padStart(2,"0");
 
     }
 
-    if(m < 0){
+    catch(e){
 
-        m = 14;
+        console.log(e);
 
     }
-
-    const mm = String(m).padStart(2,"0");
-    const ss = String(s).padStart(2,"0");
-
-    document.getElementById("time").innerText =
-        "Next Candle : " + mm + ":" + ss;
 
 }
 
-setInterval(updateTimer,1000);
-
 updateTimer();
+
+setInterval(updateTimer,1000);
