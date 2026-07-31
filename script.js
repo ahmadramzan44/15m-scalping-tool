@@ -23,10 +23,12 @@ async function updateMarket(){
         priceBox.innerText = price.toFixed(4);
 
         // Candles
-        const candles = await getCandles(symbol);
+       const candles15 = await getCandles(symbol);
+
+       const candles1 = await get1mCandles(symbol);
 
         // Signal
-        const signal = generateSignal(candles);
+        const signal = generateSignal(candles15, candles1);
 
         signalBox.innerText = signal;
 
