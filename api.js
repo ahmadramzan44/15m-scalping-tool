@@ -104,3 +104,35 @@ async function get1mCandles(symbol, limit = 300){
     }));
 
 }
+
+// ------------------------------
+// Get 5m Candles
+// ------------------------------
+
+async function get5mCandles(symbol, limit = 300){
+
+    const res = await fetch(
+
+        `${API}/fapi/v1/klines?symbol=${symbol}&interval=5m&limit=${limit}`
+
+    );
+
+    const data = await res.json();
+
+    return data.map(c => ({
+
+        time: c[0],
+
+        open: parseFloat(c[1]),
+
+        high: parseFloat(c[2]),
+
+        low: parseFloat(c[3]),
+
+        close: parseFloat(c[4]),
+
+        volume: parseFloat(c[5])
+
+    }));
+
+}
