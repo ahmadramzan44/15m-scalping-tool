@@ -25,11 +25,16 @@ async function updateMarket(){
         // Candles
        const candles15 = await getCandles(symbol);
 
-       const candles1 = await get1mCandles(symbol);
+const candles5 = await get5mCandles(symbol);
 
-        // Signal
-        const signal = generateSignal(candles15, candles1);
+const candles1 = await get1mCandles(symbol);
 
+// Signal
+const signal = generateSignal(
+    candles15,
+    candles5,
+    candles1
+);
         signalBox.innerText = signal;
 
         signalBox.className = "";
